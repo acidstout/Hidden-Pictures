@@ -1,0 +1,132 @@
+#include <windows.h>
+#include "resource.h"
+
+#pragma code_page(65001)
+
+IDI_APP ICON "app.ico"
+1 RT_MANIFEST "app.manifest"
+
+/* ------------------------------------------------------------------ */
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+STRINGTABLE
+BEGIN
+    IDS_APPNAME     "Hidden Pictures"
+    IDS_BTN_OPEN    "Open image"
+    IDS_BTN_MAGIC   "Do some magic"
+    IDS_BTN_SAVE    "Save"
+    IDS_BTN_PRINT   "Print"
+    IDS_CARD1       "1  ·  Choose the area"
+    IDS_CARD2       "2  ·  Result"
+    IDS_HINT_OPEN   "Click to open an image, or drop one here"
+    IDS_HINT_RESULT "Your two sheets will appear here"
+    IDS_HINT_DRAG   "Drag one sheet onto the other, or use the slider"
+    IDS_SET_SIZE    "Sheet size"
+    IDS_SET_DETAIL  "Detail"
+    IDS_SL_TOGETHER "Together"
+    IDS_SL_APART    "Apart"
+    IDS_ST_READY    "Ready. Open an image to start."
+    IDS_ST_OPENED   "Opened %ls (%d × %d px). Drag to choose an area, then do some magic."
+    IDS_ST_DONE     "Done: two sheets of %d × %d cells. Drag them onto each other to reveal the picture."
+    IDS_ST_SAVED    "Saved to %ls"
+    IDS_ST_PRINTED  "Sent to the printer. Tip: print on transparent film, cut the page in half and stack the halves."
+    IDS_ERR_OPEN    "This file could not be opened as an image."
+    IDS_ERR_SAVE    "The file could not be saved."
+    IDS_ERR_PRINT   "Printing failed."
+    IDS_FILT_IMAGES "Images"
+    IDS_FILT_PNG    "PNG image"
+    IDS_FILT_ALL    "All files"
+    IDS_ABOUT_TEXT  "Hidden Pictures\nVersion 1.0\n\nTurns a picture into two noisy sheets. Print them on transparent film, cut them apart and lay them on top of each other against the light to reveal the picture.\n\nCopyright © 2026 Rekow IT\nLicense: GNU GPL v3.0 or later"
+    IDS_ABOUT_LINK  "Hidden Pictures 1.0  ·  About"
+    IDS_SEL_INFO    "%d × %d px  ·  selection %d × %d"
+    IDS_UNIT_CM     "cm"
+    IDS_ST_DIRTY    "Settings changed. Do some magic to apply them."
+    IDS_THEME_LIGHT "Light mode"
+    IDS_THEME_DARK  "Dark mode"
+    IDS_PRINTER_FMT "Printer: %ls  ·  %d × %d mm"
+    IDS_PRINTER_NONE "none (A4)"
+END
+
+/* ------------------------------------------------------------------ */
+LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
+
+STRINGTABLE
+BEGIN
+    IDS_APPNAME     "Hidden Pictures"
+    IDS_BTN_OPEN    "Bild öffnen"
+    IDS_BTN_MAGIC   "Zaubern"
+    IDS_BTN_SAVE    "Speichern"
+    IDS_BTN_PRINT   "Drucken"
+    IDS_CARD1       "1  ·  Ausschnitt wählen"
+    IDS_CARD2       "2  ·  Ergebnis"
+    IDS_HINT_OPEN   "Klicken, um ein Bild zu öffnen, oder hierher ziehen"
+    IDS_HINT_RESULT "Hier erscheinen die beiden Blätter"
+    IDS_HINT_DRAG   "Ein Blatt über das andere ziehen oder den Regler benutzen"
+    IDS_SET_SIZE    "Blattgröße"
+    IDS_SET_DETAIL  "Detailgrad"
+    IDS_SL_TOGETHER "Übereinander"
+    IDS_SL_APART    "Getrennt"
+    IDS_ST_READY    "Bereit. Öffne ein Bild, um zu beginnen."
+    IDS_ST_OPENED   "%ls geöffnet (%d × %d px). Ziehe einen Ausschnitt auf und starte dann die Zauberei."
+    IDS_ST_DONE     "Fertig: zwei Blätter mit %d × %d Zellen. Ziehe sie übereinander, um das Bild sichtbar zu machen."
+    IDS_ST_SAVED    "Gespeichert unter %ls"
+    IDS_ST_PRINTED  "An den Drucker gesendet. Tipp: auf Klarsichtfolie drucken, die Seite halbieren und die Hälften aufeinanderlegen."
+    IDS_ERR_OPEN    "Diese Datei konnte nicht als Bild geöffnet werden."
+    IDS_ERR_SAVE    "Die Datei konnte nicht gespeichert werden."
+    IDS_ERR_PRINT   "Das Drucken ist fehlgeschlagen."
+    IDS_FILT_IMAGES "Bilder"
+    IDS_FILT_PNG    "PNG-Bild"
+    IDS_FILT_ALL    "Alle Dateien"
+    IDS_ABOUT_TEXT  "Hidden Pictures\nVersion 1.0\n\nWandelt ein Bild in zwei verrauschte Blätter um. Auf Klarsichtfolie drucken, auseinanderschneiden und gegen das Licht übereinanderlegen, um das Bild sichtbar zu machen.\n\nCopyright © 2026 Rekow IT\nLizenz: GNU GPL v3.0 oder später"
+    IDS_ABOUT_LINK  "Hidden Pictures 1.0  ·  Info"
+    IDS_SEL_INFO    "%d × %d px  ·  Auswahl %d × %d"
+    IDS_UNIT_CM     "cm"
+    IDS_ST_DIRTY    "Einstellungen geändert. Zaubern, um sie anzuwenden."
+    IDS_THEME_LIGHT "Heller Modus"
+    IDS_THEME_DARK  "Dunkler Modus"
+    IDS_PRINTER_FMT "Drucker: %ls  ·  %d × %d mm"
+    IDS_PRINTER_NONE "keiner (A4)"
+END
+
+/* ------------------------------------------------------------------ */
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     1,0,0,0
+ PRODUCTVERSION  1,0,0,0
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+ FILEFLAGS       0
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_APP
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "Rekow IT"
+            VALUE "FileDescription",  "Hidden Pictures - turn an image into two overlay sheets"
+            VALUE "FileVersion",      APP_VERSION_STR
+            VALUE "InternalName",     "HiddenPictures"
+            VALUE "LegalCopyright",   "Copyright © " APP_YEAR " Rekow IT"
+            VALUE "OriginalFilename", "HiddenPictures.exe"
+            VALUE "ProductName",      "Hidden Pictures"
+            VALUE "ProductVersion",   APP_VERSION_STR
+        END
+        BLOCK "040704B0"
+        BEGIN
+            VALUE "CompanyName",      "Rekow IT"
+            VALUE "FileDescription",  "Hidden Pictures - Bild in zwei Überlagerungsblätter umwandeln"
+            VALUE "FileVersion",      APP_VERSION_STR
+            VALUE "InternalName",     "HiddenPictures"
+            VALUE "LegalCopyright",   "Copyright © " APP_YEAR " Rekow IT"
+            VALUE "OriginalFilename", "HiddenPictures.exe"
+            VALUE "ProductName",      "Hidden Pictures"
+            VALUE "ProductVersion",   APP_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200, 0x0407, 1200
+    END
+END
