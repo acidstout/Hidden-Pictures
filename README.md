@@ -10,6 +10,8 @@ This is the classic *visual cryptography* trick (Naor–Shamir), wrapped in a sm
 - A single `.exe` of about 250 KB
 - Free software under the [GPL-3.0](LICENSE)
 
+![Screenshot](screenshot.png?raw=true "Screenshot")
+
 ## How it works
 
 1. The selected area of your picture is divided into a grid of square cells (the **detail** setting).
