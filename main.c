@@ -18,6 +18,8 @@
 #include <windowsx.h>
 #include <commdlg.h>
 #include <winspool.h>
+#include <dlgs.h>
+#include <shobjidl.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <shlwapi.h>
@@ -107,7 +109,7 @@ static int  g_drag, g_dragMode, g_dragSheet;
 static POINT g_dragPt, g_grab;
 static int  g_oSX, g_oSY, g_oSW, g_oSH;
 
-static void Msg(HWND hw, const WCHAR *text, UINT flags);
+static int Msg(HWND hw, const WCHAR *text, UINT flags);
 static void RegSetInt(const WCHAR *name, int v);
 static void SavePrinter(void);
 static BOOL RegGetInt(const WCHAR *name, int *out);
@@ -776,40 +778,94 @@ static void DrawButton(const DRAWITEMSTRUCT *di)
 }
 
 /* ---------------------------------------------------------------- file dialogs */
-static void BuildFilter(WCHAR *buf, size_t n, const WCHAR *n1, const WCHAR *p1, const WCHAR *n2, const WCHAR *p2)
+enum { FMT_PNG, FMT_TIFF, FMT_BMP, FMT_GIF };
+static const WCHAR *k_ext[4] = { L".png", L".tif", L".bmp", L".gif" };
+
+static int FmtFromExt(const WCHAR *path)
 {
-    WCHAR *d = buf; memset(buf, 0, n * sizeof(WCHAR));
-    #define ADD(s) do { size_t l = wcslen(s) + 1; if ((size_t)(d - buf) + l + 2 < n) { memcpy(d, s, l * sizeof(WCHAR)); d += l; } } while (0)
-    ADD(n1); ADD(p1); if (n2) { ADD(n2); ADD(p2); }
-    #undef ADD
+    const WCHAR *e = PathFindExtensionW(path);
+    if (!_wcsicmp(e, L".png")) return FMT_PNG;
+    if (!_wcsicmp(e, L".tif") || !_wcsicmp(e, L".tiff")) return FMT_TIFF;
+    if (!_wcsicmp(e, L".bmp")) return FMT_BMP;
+    if (!_wcsicmp(e, L".gif")) return FMT_GIF;
+    return -1;
 }
 
-static BOOL OpenDialog(HWND hw, WCHAR *out)
+/* "Label (*.a, *.b)" - the file type list shows the extensions, not just the name */
+static void TypeLabel(WCHAR *out, size_t n, const WCHAR *name, const WCHAR *patterns)
 {
-    WCHAR filt[512]; BuildFilter(filt, 512, LoadStr(IDS_FILT_IMAGES),
-        L"*.jpg;*.jpeg;*.jfif;*.png;*.gif;*.bmp;*.dib;*.tif;*.tiff;*.jxr;*.wdp;*.hdp;*.ico;*.heic;*.heif;*.webp;*.avif",
-        LoadStr(IDS_FILT_ALL), L"*.*");
-    OPENFILENAMEW o = { sizeof o }; out[0] = 0;
-    o.hwndOwner = hw; o.lpstrFilter = filt; o.lpstrFile = out; o.nMaxFile = MAX_PATH;
-    o.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_HIDEREADONLY;
-    return GetOpenFileNameW(&o);
+    WCHAR shown[512]; size_t k = 0;
+    for (const WCHAR *p = patterns; *p && k + 3 < _countof(shown); p++) {
+        if (*p == L';') { shown[k++] = L','; shown[k++] = L' '; } else shown[k++] = *p;
+    }
+    shown[k] = 0;
+    swprintf_s(out, n, L"%ls (%ls)", name, shown);
 }
 
-static BOOL SaveDialog(HWND hw, WCHAR *out)
+/* Both dialogs use the same Windows common item dialog, so they look identical. */
+static BOOL ShowFileDialog(HWND hw, BOOL save, const WCHAR *defName, int *fmt, WCHAR *out)
 {
-    WCHAR filt[256]; BuildFilter(filt, 256, LoadStr(IDS_FILT_PNG), L"*.png", NULL, NULL);
-    WCHAR base[MAX_PATH] = L"hidden";
+    static const WCHAR *k_imgPat = L"*.jpg;*.jpeg;*.jfif;*.png;*.gif;*.bmp;*.dib;*.tif;*.tiff;*.jxr;*.wdp;*.hdp;*.ico;*.heic;*.heif;*.webp;*.avif";
+    IFileDialog *d = NULL; IShellItem *res = NULL, *folder = NULL; BOOL ok = FALSE;
+    WCHAR l[8][640]; COMDLG_FILTERSPEC fs[5]; UINT n = 0;
+    HRESULT hr = CoCreateInstance(save ? &CLSID_FileSaveDialog : &CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+                                  save ? &IID_IFileSaveDialog : &IID_IFileOpenDialog, (void **)&d);
+    if (FAILED(hr)) return FALSE;
+
+    if (save) {
+        TypeLabel(l[0], 640, LoadStr(IDS_FILT_PNG),  L"*.png");          fs[n].pszName = l[0]; fs[n++].pszSpec = L"*.png";
+        TypeLabel(l[1], 640, LoadStr(IDS_FILT_TIFF), L"*.tif;*.tiff");   fs[n].pszName = l[1]; fs[n++].pszSpec = L"*.tif;*.tiff";
+        TypeLabel(l[2], 640, LoadStr(IDS_FILT_BMP),  L"*.bmp");          fs[n].pszName = l[2]; fs[n++].pszSpec = L"*.bmp";
+        TypeLabel(l[3], 640, LoadStr(IDS_FILT_GIF),  L"*.gif");          fs[n].pszName = l[3]; fs[n++].pszSpec = L"*.gif";
+    } else {
+        TypeLabel(l[0], 640, LoadStr(IDS_FILT_IMAGES), k_imgPat);        fs[n].pszName = l[0]; fs[n++].pszSpec = k_imgPat;
+        TypeLabel(l[1], 640, LoadStr(IDS_FILT_ALL), L"*.*");             fs[n].pszName = l[1]; fs[n++].pszSpec = L"*.*";
+    }
+    IFileDialog_SetFileTypes(d, n, fs);
+    IFileDialog_SetFileTypeIndex(d, 1);
+    IFileDialog_SetOptions(d, FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | (save ? FOS_OVERWRITEPROMPT : FOS_FILEMUSTEXIST));
+    if (save) { IFileDialog_SetDefaultExtension(d, L"png"); IFileDialog_SetFileName(d, defName); }
+    if (g_path[0]) {                                  /* start in the folder of the current picture */
+        WCHAR dir[MAX_PATH]; wcscpy_s(dir, MAX_PATH, g_path); PathRemoveFileSpecW(dir);
+        if (SUCCEEDED(SHCreateItemFromParsingName(dir, NULL, &IID_IShellItem, (void **)&folder))) IFileDialog_SetFolder(d, folder);
+    }
+    if (SUCCEEDED(IFileDialog_Show(d, hw)) && SUCCEEDED(IFileDialog_GetResult(d, &res))) {
+        WCHAR *p = NULL;
+        if (SUCCEEDED(IShellItem_GetDisplayName(res, SIGDN_FILESYSPATH, &p)) && p) {
+            wcscpy_s(out, MAX_PATH, p); CoTaskMemFree(p); ok = TRUE;
+            if (save) {
+                UINT idx = 1; IFileDialog_GetFileTypeIndex(d, &idx);
+                int f = FmtFromExt(out);
+                if (f < 0) {                          /* no (known) extension: take it from the selected file type */
+                    f = CLAMPV((int)idx - 1, 0, 3);
+                    wcscat_s(out, MAX_PATH, k_ext[f]);
+                    if (GetFileAttributesW(out) != INVALID_FILE_ATTRIBUTES) {
+                        WCHAR q[MAX_PATH + 100]; swprintf_s(q, _countof(q), LoadStr(IDS_CONFIRM_REPLACE), PathFindFileNameW(out));
+                        if (Msg(hw, q, MB_YESNO | MB_ICONQUESTION) != IDYES) ok = FALSE;
+                    }
+                }
+                *fmt = f;
+            }
+        }
+    }
+    REL(res); REL(folder); REL(d);
+    return ok;
+}
+
+static BOOL OpenDialog(HWND hw, WCHAR *out) { int f; return ShowFileDialog(hw, FALSE, NULL, &f, out); }
+
+static BOOL SaveDialog(HWND hw, WCHAR *out, int *fmt)
+{
+    WCHAR base[MAX_PATH] = L"hidden", name[MAX_PATH + 16];
     if (g_path[0]) { wcscpy_s(base, MAX_PATH, PathFindFileNameW(g_path)); PathRemoveExtensionW(base); }
-    swprintf_s(out, MAX_PATH, L"%ls_hidden.png", base);
-    OPENFILENAMEW o = { sizeof o };
-    o.hwndOwner = hw; o.lpstrFilter = filt; o.lpstrFile = out; o.nMaxFile = MAX_PATH; o.lpstrDefExt = L"png";
-    if (g_path[0]) { WCHAR dir[MAX_PATH]; wcscpy_s(dir, MAX_PATH, g_path); PathRemoveFileSpecW(dir); o.lpstrInitialDir = dir; }
-    o.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_HIDEREADONLY;
-    return GetSaveFileNameW(&o);
+    swprintf_s(name, _countof(name), L"%ls_hidden.png", base);
+    return ShowFileDialog(hw, TRUE, name, fmt, out);
 }
 
 /* ---------------------------------------------------------------- PNG export */
-static BOOL SavePng(const WCHAR *path)
+static BOOL EncodeImage(int fmt, int tiffComp, const BYTE *buf, int W, int H, int stride, double dpi, BYTE **outData, DWORD *outSize);
+
+static BOOL SaveImage(const WCHAR *path, int fmt)
 {
     int N = MAXW(g_cols, g_rows);
     int P = MAXW(4, (int)(g_sizeCm / 2.54 * 600.0 / N + 0.5));
@@ -835,25 +891,75 @@ static BOOL SavePng(const WCHAR *path)
         for (int x = 0; x < W; x++) if ((x / (3 * P)) % 2 == 0) o[x >> 3] &= (BYTE)~(0x80 >> (x & 7));
     }
 
-    IWICStream *st = NULL; IWICBitmapEncoder *enc = NULL; IWICBitmapFrameEncode *fr = NULL; IPropertyBag2 *pb = NULL;
-    BOOL ok = FALSE; WICPixelFormatGUID pf = GUID_WICPixelFormatBlackWhite;
     double dpi = (double)P * N / (g_sizeCm / 2.54);
-    if (FAILED(IWICImagingFactory_CreateStream(g_wic, &st))) goto done;
-    if (FAILED(IWICStream_InitializeFromFilename(st, path, GENERIC_WRITE))) goto done;
-    if (FAILED(IWICImagingFactory_CreateEncoder(g_wic, &GUID_ContainerFormatPng, NULL, &enc))) goto done;
-    if (FAILED(IWICBitmapEncoder_Initialize(enc, (IStream *)st, WICBitmapEncoderNoCache))) goto done;
+    BYTE *data = NULL; DWORD size = 0; BOOL ok = FALSE;
+    if (fmt == FMT_TIFF) {
+        /* lossless TIFF: try LZW and PackBits, keep whichever is smaller for this picture */
+        BYTE *d2 = NULL; DWORD s2 = 0;
+        BOOL a = EncodeImage(fmt, WICTiffCompressionLZW, buf, W, H, stride, dpi, &data, &size);
+        BOOL b = EncodeImage(fmt, WICTiffCompressionRLE, buf, W, H, stride, dpi, &d2, &s2);
+        if (b && (!a || s2 < size)) { free(data); data = d2; size = s2; a = TRUE; } else free(d2);
+        ok = a;
+    } else ok = EncodeImage(fmt, 0, buf, W, H, stride, dpi, &data, &size);
+    free(buf);
+    if (ok) {
+        HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        DWORD wr = 0;
+        ok = f != INVALID_HANDLE_VALUE && WriteFile(f, data, size, &wr, NULL) && wr == size;
+        if (f != INVALID_HANDLE_VALUE) CloseHandle(f);
+        if (!ok) DeleteFileW(path);
+    }
+    free(data);
+    return ok;
+}
+
+/* Encodes the 1-bit sheet (bit 1 = white) into memory. tiffComp is a WICTiffCompressionOption for TIFF. */
+static BOOL EncodeImage(int fmt, int tiffComp, const BYTE *buf, int W, int H, int stride, double dpi, BYTE **outData, DWORD *outSize)
+{
+    static const GUID *cont[4] = { &GUID_ContainerFormatPng, &GUID_ContainerFormatTiff, &GUID_ContainerFormatBmp, &GUID_ContainerFormatGif };
+    IStream *st = NULL; IWICBitmapEncoder *enc = NULL; IWICBitmapFrameEncode *fr = NULL; IPropertyBag2 *pb = NULL; IWICPalette *pal = NULL;
+    BOOL ok = FALSE, indexed = (fmt == FMT_BMP || fmt == FMT_GIF);
+    WICPixelFormatGUID pf = fmt == FMT_GIF ? GUID_WICPixelFormat8bppIndexed : indexed ? GUID_WICPixelFormat1bppIndexed : GUID_WICPixelFormatBlackWhite, want = pf;
+    BYTE *px8 = NULL;
+
+    if (FAILED(CreateStreamOnHGlobal(NULL, TRUE, &st))) goto done;
+    if (FAILED(IWICImagingFactory_CreateEncoder(g_wic, cont[fmt], NULL, &enc))) goto done;
+    if (FAILED(IWICBitmapEncoder_Initialize(enc, st, WICBitmapEncoderNoCache))) goto done;
+    if (indexed) {                                 /* palette: index 0 = black, index 1 = white */
+        WICColor c[2] = { 0xFF000000u, 0xFFFFFFFFu };
+        if (FAILED(IWICImagingFactory_CreatePalette(g_wic, &pal)) || FAILED(IWICPalette_InitializeCustom(pal, c, 2))) goto done;
+        if (fmt == FMT_GIF) IWICBitmapEncoder_SetPalette(enc, pal);
+    }
     if (FAILED(IWICBitmapEncoder_CreateNewFrame(enc, &fr, &pb))) goto done;
+    if (fmt == FMT_TIFF && pb) {
+        PROPBAG2 opt; VARIANT v; memset(&opt, 0, sizeof opt); VariantInit(&v);
+        opt.pstrName = L"TiffCompressionMethod"; v.vt = VT_UI1; v.bVal = (BYTE)tiffComp;
+        if (FAILED(IPropertyBag2_Write(pb, 1, &opt, &v))) goto done;
+    }
     if (FAILED(IWICBitmapFrameEncode_Initialize(fr, pb))) goto done;
     if (FAILED(IWICBitmapFrameEncode_SetSize(fr, W, H))) goto done;
-    IWICBitmapFrameEncode_SetResolution(fr, dpi, dpi);
-    if (FAILED(IWICBitmapFrameEncode_SetPixelFormat(fr, &pf)) || !IsEqualGUID(&pf, &GUID_WICPixelFormatBlackWhite)) goto done;
-    if (FAILED(IWICBitmapFrameEncode_WritePixels(fr, H, stride, stride * H, buf))) goto done;
+    if (fmt != FMT_GIF) IWICBitmapFrameEncode_SetResolution(fr, dpi, dpi);
+    if (FAILED(IWICBitmapFrameEncode_SetPixelFormat(fr, &pf)) || !IsEqualGUID(&pf, &want)) goto done;
+    if (pal && FAILED(IWICBitmapFrameEncode_SetPalette(fr, pal))) goto done;
+    if (fmt == FMT_GIF) {                          /* GIF encoder wants 8-bit indices */
+        px8 = (BYTE *)malloc((size_t)W * H);
+        if (!px8) goto done;
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) px8[(size_t)y * W + x] = (buf[(size_t)y * stride + (x >> 3)] >> (7 - (x & 7))) & 1;
+        if (FAILED(IWICBitmapFrameEncode_WritePixels(fr, H, W, W * H, px8))) goto done;
+    } else if (FAILED(IWICBitmapFrameEncode_WritePixels(fr, H, stride, stride * H, (BYTE *)buf))) goto done;
     if (FAILED(IWICBitmapFrameEncode_Commit(fr))) goto done;
     if (FAILED(IWICBitmapEncoder_Commit(enc))) goto done;
-    ok = TRUE;
+    {
+        STATSTG ss; LARGE_INTEGER z = { 0 }; ULONG got = 0;
+        if (FAILED(IStream_Stat(st, &ss, STATFLAG_NONAME)) || ss.cbSize.QuadPart == 0 || ss.cbSize.QuadPart > 0x7FFFFFFF) goto done;
+        *outSize = (DWORD)ss.cbSize.QuadPart; *outData = (BYTE *)malloc(*outSize);
+        if (!*outData) goto done;
+        st->lpVtbl->Seek(st, z, STREAM_SEEK_SET, NULL);
+        if (FAILED(st->lpVtbl->Read(st, *outData, *outSize, &got)) || got != *outSize) { free(*outData); *outData = NULL; goto done; }
+        ok = TRUE;
+    }
 done:
-    REL(pb); REL(fr); REL(enc); REL(st); free(buf);
-    if (!ok) DeleteFileW(path);
+    REL(pal); REL(pb); REL(fr); REL(enc); REL(st); free(px8);
     return ok;
 }
 
@@ -1001,9 +1107,9 @@ static void OnCommand(HWND hw, int id)
     case IDC_PRINTER: PrinterSetup(hw); break;
     case IDC_THEME: g_themePref = g_dark ? 0 : 1; RegSetInt(L"Theme", g_themePref); ApplyTheme(hw, g_themePref == 1); break;
     case IDC_SAVE: {
-        WCHAR p[MAX_PATH];
-        if (g_have && SaveDialog(hw, p)) {
-            if (SavePng(p)) SetStatusFmt(IDS_ST_SAVED, p);
+        WCHAR p[MAX_PATH]; int fmt = FMT_PNG;
+        if (g_have && SaveDialog(hw, p, &fmt)) {
+            if (SaveImage(p, fmt)) SetStatusFmt(IDS_ST_SAVED, p);
             else Msg(hw, LoadStr(IDS_ERR_SAVE), MB_OK | MB_ICONWARNING);
         }
         break; }
@@ -1039,11 +1145,12 @@ static LRESULT CALLBACK CbtProc(int code, WPARAM w, LPARAM l)
     return CallNextHookEx(g_hook, code, w, l);
 }
 
-static void Msg(HWND hw, const WCHAR *text, UINT flags)
+static int Msg(HWND hw, const WCHAR *text, UINT flags)
 {
     g_hook = SetWindowsHookExW(WH_CBT, CbtProc, NULL, GetCurrentThreadId());
-    MessageBoxW(hw, text, LoadStr(IDS_APPNAME), flags);
+    int r = MessageBoxW(hw, text, LoadStr(IDS_APPNAME), flags);
     if (g_hook) { UnhookWindowsHookEx(g_hook); g_hook = NULL; }
+    return r;
 }
 
 #define REGKEY L"Software\\Rekow IT\\Hidden Pictures"

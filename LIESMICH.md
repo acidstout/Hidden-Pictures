@@ -67,10 +67,17 @@ Die maximale Blattgröße ergibt sich aus dem Papier des gewählten Druckers. Be
 
 ### Speichern
 
-**Speichern** fragt nach dem Ziel und schreibt ein PNG, das beide Blätter untereinander enthält, getrennt durch eine gestrichelte Schnittlinie:
+**Speichern** fragt nach dem Ziel und schreibt ein Bild, das beide Blätter untereinander enthält, getrennt durch eine gestrichelte Schnittlinie. Das Dateiformat wählst du im Speichern-Dialog (oder durch Eintippen der Endung). Wechselst du dort den Dateityp, passt sich auch die Endung im Dateinamen an.
 
-- 1 Bit Schwarzweiß, Auflösung in der Größenordnung von 600 dpi
-- Die dpi-Angabe wird mitgespeichert, sodass die Datei in genau der gewählten Blattgröße gedruckt wird
+| Format | Hinweise |
+| --- | --- |
+| **PNG** (Standard) | 1 Bit Schwarzweiß, verlustfrei, kleinste Dateien |
+| **TIFF** | 1 Bit Schwarzweiß, verlustfrei. Die App kodiert das Bild mit **LZW** und mit **PackBits** und behält die jeweils kleinere Variante |
+| **BMP** | 1 Bit mit Schwarzweiß-Palette, unkomprimiert |
+| **GIF** | Palettenbild (Schwarzweiß), vom Format selbst LZW-komprimiert |
+
+- Die Auflösung liegt in der Größenordnung von 600 dpi. PNG, TIFF und BMP speichern die dpi-Angabe, sodass die Datei in genau der gewählten Blattgröße gedruckt wird (GIF kennt keine dpi-Angabe).
+- Alle Formate enthalten exakt dieselben Pixel.
 - Standard-Dateiname: `<Quelle>_hidden.png`
 
 ### Drucken

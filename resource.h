@@ -40,3 +40,7 @@
 #define IDS_THEME_DARK  32
 #define IDS_PRINTER_FMT 33
 #define IDS_PRINTER_NONE 34
+#define IDS_FILT_TIFF   35
+#define IDS_FILT_BMP    36
+#define IDS_FILT_GIF    37
+#define IDS_CONFIRM_REPLACE 38

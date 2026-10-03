@@ -45,6 +45,10 @@ BEGIN
     IDS_THEME_DARK  "Dark mode"
     IDS_PRINTER_FMT "Printer: %ls  ·  %d × %d mm"
     IDS_PRINTER_NONE "none (A4)"
+    IDS_FILT_TIFF   "TIFF image"
+    IDS_FILT_BMP    "BMP image"
+    IDS_FILT_GIF    "GIF image"
+    IDS_CONFIRM_REPLACE "%ls already exists. Do you want to replace it?"
 END
 
 /* ------------------------------------------------------------------ */
@@ -86,6 +90,10 @@ BEGIN
     IDS_THEME_DARK  "Dunkler Modus"
     IDS_PRINTER_FMT "Drucker: %ls  ·  %d × %d mm"
     IDS_PRINTER_NONE "keiner (A4)"
+    IDS_FILT_TIFF   "TIFF-Bild"
+    IDS_FILT_BMP    "BMP-Bild"
+    IDS_FILT_GIF    "GIF-Bild"
+    IDS_CONFIRM_REPLACE "%ls ist bereits vorhanden. Möchten Sie die Datei ersetzen?"
 END
 
 /* ------------------------------------------------------------------ */

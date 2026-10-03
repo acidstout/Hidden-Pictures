@@ -67,11 +67,18 @@ The maximum sheet size is derived from the paper of the selected printer. Both s
 
 ### Saving
 
-**Save** asks for a target and writes one PNG containing both sheets stacked, separated by a dashed cut line:
+**Save** asks for a target and writes one image containing both sheets stacked, separated by a dashed cut line. The file type is chosen in the save dialog (or by typing the extension); changing the type there also updates the extension in the file name.
 
-- 1-bit black and white, 600 dpi class resolution
-- the DPI is stored so that the file prints at exactly the chosen sheet size
-- default file name: `<source>_hidden.png`
+| Format | Notes |
+| --- | --- |
+| **PNG** (default) | 1-bit black and white, lossless, smallest files |
+| **TIFF** | 1-bit black and white, lossless. The app encodes the image with both **LZW** and **PackBits** and keeps whichever is smaller for the picture at hand |
+| **BMP** | 1-bit with a black/white palette, uncompressed |
+| **GIF** | Palette image (black/white), LZW-compressed by the format itself |
+
+- Resolution is in the 600 dpi class. PNG, TIFF and BMP store the DPI so that the file prints at exactly the chosen sheet size (GIF has no DPI field).
+- All formats contain exactly the same pixels.
+- Default file name: `<source>_hidden.png`
 
 ### Printing
 
