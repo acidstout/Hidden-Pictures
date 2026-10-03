@@ -10,7 +10,7 @@ This is the classic *visual cryptography* trick (Naor–Shamir), wrapped in a sm
 - A single `.exe` of about 250 KB
 - Free software under the [GPL-3.0](LICENSE)
 
-![Screenshot](screenshot.png?raw=true "Screenshot")
+![Screenshot](screenshot.png "Screenshot")
 
 ## How it works
 
